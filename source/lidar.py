@@ -49,13 +49,13 @@ def simplify_lidar(raw_data: np.array, sectors=3, distances=(0.4, 1)) -> tuple:
 
         else:
             sectors_mins.append(min(raw_data[i:]))
+            break
     
-    return tuple(danger_class(i, distances) for i in sectors_mins)    
+    return tuple(danger_class(i, distances) for i in sectors_mins)
     
 
-def danger_class(distance: float, classes) -> int:
+def danger_class(distance: float, classes: list) -> int:
     for i, el in enumerate(classes):
         if distance < el :
             return i
     return len(classes) # len of classes is equal the low danger class
-
