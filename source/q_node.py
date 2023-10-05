@@ -90,7 +90,7 @@ def main():
             
             lidar_data = tuple(int(i) for i in msg_lidar.data.split())
             pos = (msg_odom.pose.pose.position.x, msg_odom.pose.pose.position.y)
-            purppose_angle = angle_to_purp(...)
+            purppose_angle = angle_from_robot_to_purp(msg_odom, purpose_pos)
 
             r, done = q.get_reward(linear_speed, time.now() - start)
             total_reward += r
