@@ -4,7 +4,7 @@ import rospy
 from geometry_msgs.msg import Twist
 
 
-FORWARD_SPEED = 0.5
+FORWARD_SPEED = 0.22
 ROT_SPEED = 0.3
 
 def make_cmd(pub: rospy.Publisher, lin, ang):
@@ -14,10 +14,12 @@ def make_cmd(pub: rospy.Publisher, lin, ang):
 
     pub.publish(cmd)
 
+def stop(pub: rospy.Publisher, speed):
+    make_cmd(pub, 0.0, 0.0)
 
 def forward(pub: rospy.Publisher, speed):
     global FORWARD_SPEED
-    current_speed = min(FORWARD_SPEED, speed + 0.01)
+    current_speed = min(FORWARD_SPEED, speed + 0.02)
     make_cmd(pub, current_speed, 0.0)
     return current_speed
 

@@ -13,6 +13,9 @@ import itertools
 from collections import namedtuple
 
 
+State = namedtuple('state', ['lidar', 'angle_to_purpose'])
+
+
 def create_purpose(pos, distance):
     angles = np.arange(0, 360, 1)
     radians = np.radians(angles)
@@ -27,14 +30,6 @@ def create_purpose(pos, distance):
 
     return random.choice(points[mask])
 
-
-
-
-actions = {
-    0: controll.left,
-    1: controll.forward,
-    2: controll.right,
-}
 
 def distance(pos1, pos2):
     return ((pos1[0]- pos2[0]) ** 2 + (pos1[1]- pos2[1]) ** 2) ** 0.5
@@ -55,15 +50,13 @@ class Q_solver:
 
         # QTable init
         self.q = dict()
-        State = namedtuple('state', ['lidar', 'angle_to_purpose'])
+        
         for lidar_state in itertools.product(range(len(self.danger_classes)+1), repeat=self.sectors):
             for purp_angle in range(len(self.angles_to_purpose)+1):
                 s = State(lidar_state, purp_angle)
                 self.q[s] = dict()
                 for action in self.actions:
                     self.q[s][action] = 0
-                    
-
 
         self.current_state = None
         self.previous_state = None
@@ -71,21 +64,47 @@ class Q_solver:
         self.current_action = None
         self.previous_action = None
 
-    def get_reward(self, speed, timestamp, pos, previous_pos, purpose_pos, simplified_lidar):
+        self.pos = None
+        self.previous_pos = None
+        self.purpose_pos = None
+
+    def set_new_purpose(self, purpose_pos):
+        self.purpose_pos = purpose_pos
+
+        self.current_state = None
+        self.previous_state = None
+        
+        self.current_action = None
+        self.previous_action = None
+
+        self.current_pos = None
+        self.previous_pos = None
+        self.purpose_pos = None
+
+    def set_new_data(self, new_state, new_pos):
+        self.previous_state = self.current_state
+        self.current_state = new_state
+        self.previous_pos = self.current_pos
+        self.current_pos = new_pos
+
+    def get_reward(self, speed, timestamp):
+
+        if self.previous_pos is None:
+            return 0, False
 
         done = False
         r = 0
 
         # shortening the distance to purpose - good
         best_coming = speed * timestamp
-        real_coming = distance(previous_pos, purpose_pos) - distance(pos, purpose_pos)
+        real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
         r += 20 * (real_coming / best_coming)
         
         # close to obstacle - bad
-        if 0 in simplified_lidar:
+        if 0 in self.current_state.lidar:
             r -= 50
         
-        if distance(pos, purpose_pos) < 0.5:
+        if distance(self.current_pos, self.purpose_pos) < 0.25:
             done = True
             r += 80
         
@@ -93,53 +112,25 @@ class Q_solver:
 
     def choose_action(self):
         # epsilon greedy policy is here
-        if random.random() > self.epsilon:
-            return random.choice(list(self.q[self.current_state].keys()))
-        return max(self.q[self.current_state], key=lambda a: self.q[self.current_state][a])
 
-    def update(self, new_state, new_action, reward):
-        self.previous_state = self.current_state
-        self.current_state = new_state
+        action = None
+        best_action = max(self.q[self.current_state], key=lambda a: self.q[self.current_state][a])
+
+        if random.random() > self.epsilon or not best_action:
+            action = random.choice(list(self.q[self.current_state].keys()))
+        else:
+            action = best_action
 
         self.previous_action = self.current_action
-        self.current_action = new_action
+        self.current_action = action
 
+        return self.current_action
+         
+
+    def update(self, reward):
+        # if that is the first update
+        if self.previous_state is None:
+            return
         # Q(s, a) = Q(s, a) + alpha * (r + gamma * max(Q(s', a')) - Q(s, a))
         self.q[self.previous_state][self.previous_action] += self.alpha * (reward + self.gamma * max(self.q[self.previous_state][a] for a in self.q[self.previous_state]) - self.q[self.previous_state][self.previous_action])
 
-
-def main():
-
-    q = Q_solver(
-        alpha=0.4,
-        gamma=0.999,
-        epsilon=0.02,
-        sectors=3,
-        danger_classes=(0.4, 1.2),
-        angles_to_purpose=(-15, 15),
-        actions=actions
-    )
-
-    rospy.init_node('q_node')
-    rospy.loginfo('q started')
-    
-    rate = rospy.Rate(10)
-    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-    linear_speed = 0
-
-
-    start = time.perf_counter()
-    while not rospy.is_shutdown():
-        if time.perf_counter() - start < 0.2:
-            linear_speed = controll.right(pub, linear_speed)
-
-        elif time.perf_counter() - start < 0.4:
-            linear_speed = controll.left(pub, linear_speed)
-
-        else:
-            start = time.perf_counter()
-    
-
-
-if __name__ == '__main__':
-    main()
