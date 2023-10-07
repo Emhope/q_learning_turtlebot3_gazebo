@@ -100,6 +100,8 @@ def main():
             q.update(r)
 
             rate.sleep()
+            
+        q.save(f'q_table{epoch}.json')
         rospy.loginfo(f'epoch ended with reward {total_reward}')
 
         

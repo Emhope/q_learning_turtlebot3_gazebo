@@ -11,6 +11,7 @@ import random
 import numpy as np
 import itertools
 from collections import namedtuple
+import json
 
 
 State = namedtuple('state', ['lidar', 'angle_to_purpose'])
@@ -133,4 +134,9 @@ class Q_solver:
             return
         # Q(s, a) = Q(s, a) + alpha * (r + gamma * max(Q(s', a')) - Q(s, a))
         self.q[self.previous_state][self.previous_action] += self.alpha * (reward + self.gamma * max(self.q[self.previous_state][a] for a in self.q[self.previous_state]) - self.q[self.previous_state][self.previous_action])
+
+
+    def save(self, filename='q_table.json'):
+        with open(filename, 'w', encoding='utf-8') as file:
+            json.dump(self.q, file)
 
