@@ -9,35 +9,7 @@ from math import (atan2, pi)
 
 import q_solve
 import controll
-
-def get_purpose_angle(odom_msg: Odometry, purp_pose):
-    
-    pos = odom_msg.pose.pose.position
-
-    angle = atan2(purp_pose[1] - pos.y, purp_pose[0] - pos.x) * 180 / pi
-    if angle < 0:
-        angle += 360
-
-    return angle
-
-    
-def get_robot_angle(odom_msg: Odometry):
-
-    quat = odom_msg.pose.pose.orientation
-
-    # that work because robot can rotate only around z axis
-    angle = atan2(quat.z, quat.w) * 180 / pi * 2
-    if angle < 0:
-        angle = 360 - abs(angle)
-    
-    return angle
-
-def angle_from_robot_to_purp(odom_msg: Odometry, purp_pose):
-    alphaR = get_robot_angle(odom_msg)
-    alphaP = get_purpose_angle(odom_msg, purp_pose)
-
-    # write code here
-
+import angle_tools
 
 
 def main():
@@ -53,7 +25,7 @@ def main():
         gamma=0.999,
         epsilon=0.02,
         sectors=3,
-        danger_classes=(0.4, 1.2),
+        danger_classes=(0.1, 0.4, 1.2),
         angles_to_purpose=(-15, 15),
         actions=actions
     )
@@ -90,7 +62,7 @@ def main():
             
             lidar_data = tuple(int(i) for i in msg_lidar.data.split())
             pos = (msg_odom.pose.pose.position.x, msg_odom.pose.pose.position.y)
-            purppose_angle = angle_from_robot_to_purp(msg_odom, purpose_pos)
+            purppose_angle = angle_tools.angle_from_robot_to_purp(msg_odom, purpose_pos)
 
             r, done = q.get_reward(linear_speed, time.now() - start)
             total_reward += r
@@ -103,10 +75,8 @@ def main():
             
         q.save(f'q_table{epoch}.json')
         rospy.loginfo(f'epoch ended with reward {total_reward}')
-
         
     
-
-
 if __name__ == '__main__':
     main()
+    

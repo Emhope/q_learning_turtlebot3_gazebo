@@ -82,7 +82,10 @@ class Q_solver:
         self.previous_pos = None
         self.purpose_pos = None
 
-    def set_new_data(self, new_state, new_pos):
+    def set_new_data(self, lidar_data, angle_to_purp, new_pos):
+        simplified_angle = lidar.danger_class(angle_to_purp, self.angles_to_purpose)
+        new_state = State(lidar=lidar_data, angle_to_purpose=simplified_angle) 
+
         self.previous_state = self.current_state
         self.current_state = new_state
         self.previous_pos = self.current_pos

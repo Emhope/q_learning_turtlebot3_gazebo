@@ -22,8 +22,8 @@ def get_lidar_array (msg: LaserScan, show=False) -> np.array:
     
     global ANGLE
 
-    n = np.array(msg.ranges)
-    n = np.concatenate((n[-ANGLE:], n[:ANGLE]))
+    n = np.array(msg.ranges) # anticlockwise
+    n = np.concatenate((n[-ANGLE:], n[:ANGLE])) # 
     
     if not show:
         return n
