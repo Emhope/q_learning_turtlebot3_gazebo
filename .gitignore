@@ -2,5 +2,5 @@ test_node.py
 .vscode
 source/__pycache__
 source/.vscode
-.json
-.pkl
+*.json
+*.pkl

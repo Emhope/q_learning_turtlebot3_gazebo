@@ -25,7 +25,7 @@ def main():
     q = q_solve.Q_solver(
         alpha=0.4,
         gamma=0.999,
-        epsilon=0.02,
+        epsilon=0.5,
         sectors=3,
         danger_classes=lidar_processing_node.DANGER_CLASSES_LIDAR,
         angles_to_purpose=(-15, 15),
@@ -87,7 +87,7 @@ def main():
 
             rate.sleep()
             
-        q.save(f'q_table{epoch}.json')
+        q.save(f'q_table{epoch}.pkl')
         rospy.loginfo(f'epoch ended with reward {total_reward}')
         
     
