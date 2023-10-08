@@ -149,4 +149,9 @@ class Q_solver:
     def save(self, filename='q_table.pkl'):
         with open(filename, 'wb') as file:
             pickle.dump(self.q, file)
+    
+    def upload(self, filename):
+        with open(filename, 'rb') as file:
+            self.q = pickle.load(file)
+
 
