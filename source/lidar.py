@@ -37,7 +37,7 @@ def get_lidar_array (msg: LaserScan, show=False) -> np.array:
     plt.show(block=False)
     
 
-def simplify_lidar(raw_data: np.array, sectors=3, distances=(0.4, 1)) -> tuple:
+def simplify_lidar(raw_data: np.array, distances, sectors) -> tuple:
     size_of_sector = int(raw_data.shape[0]/sectors)
     
     sectors_mins = []

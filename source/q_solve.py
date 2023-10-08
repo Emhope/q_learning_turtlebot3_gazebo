@@ -12,6 +12,7 @@ import numpy as np
 import itertools
 from collections import namedtuple
 import json
+import pickle
 
 
 State = namedtuple('state', ['lidar', 'angle_to_purpose'])
@@ -27,7 +28,9 @@ def create_purpose(pos, distance):
     points = np.column_stack((x, y))
 
     mask = np.abs(points[:, 0]) < 2.2
-    mask = np.abs(points[:, 1]) < 2.2
+    mask &= np.abs(points[:, 0]) > -2.2
+    mask &= np.abs(points[:, 1]) < 2.2
+    mask &= np.abs(points[:, 1]) > -2.2
 
     return random.choice(points[mask])
 
@@ -54,7 +57,7 @@ class Q_solver:
         
         for lidar_state in itertools.product(range(len(self.danger_classes)+1), repeat=self.sectors):
             for purp_angle in range(len(self.angles_to_purpose)+1):
-                s = State(lidar_state, purp_angle)
+                s = (lidar_state, purp_angle)
                 self.q[s] = dict()
                 for action in self.actions:
                     self.q[s][action] = 0
@@ -80,18 +83,18 @@ class Q_solver:
 
         self.current_pos = None
         self.previous_pos = None
-        self.purpose_pos = None
+
 
     def set_new_data(self, lidar_data, angle_to_purp, new_pos):
         simplified_angle = lidar.danger_class(angle_to_purp, self.angles_to_purpose)
-        new_state = State(lidar=lidar_data, angle_to_purpose=simplified_angle) 
+        new_state = (lidar_data, simplified_angle) 
 
         self.previous_state = self.current_state
         self.current_state = new_state
         self.previous_pos = self.current_pos
         self.current_pos = new_pos
 
-    def get_reward(self, speed, timestamp):
+    def get_reward(self, speed: float, timestamp: rospy.Duration):
 
         if self.previous_pos is None:
             return 0, False
@@ -100,12 +103,15 @@ class Q_solver:
         r = 0
 
         # shortening the distance to purpose - good
-        best_coming = speed * timestamp
-        real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
-        r += 20 * (real_coming / best_coming)
+        if speed > 0:
+            best_coming = speed * timestamp.to_sec()
+            real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
+            r += 20 * (real_coming / best_coming)
+        else:
+            r -= 5
         
         # close to obstacle - bad
-        if 0 in self.current_state.lidar:
+        if 0 in self.current_state[0]: # 0 in lidar is very close
             r -= 50
         
         if distance(self.current_pos, self.purpose_pos) < 0.25:
@@ -133,13 +139,14 @@ class Q_solver:
 
     def update(self, reward):
         # if that is the first update
-        if self.previous_state is None:
+        if self.previous_action is None:
             return
+
         # Q(s, a) = Q(s, a) + alpha * (r + gamma * max(Q(s', a')) - Q(s, a))
         self.q[self.previous_state][self.previous_action] += self.alpha * (reward + self.gamma * max(self.q[self.previous_state][a] for a in self.q[self.previous_state]) - self.q[self.previous_state][self.previous_action])
 
 
-    def save(self, filename='q_table.json'):
-        with open(filename, 'w', encoding='utf-8') as file:
-            json.dump(self.q, file)
+    def save(self, filename='q_table.pkl'):
+        with open(filename, 'wb') as file:
+            pickle.dump(self.q, file)
 
