@@ -13,6 +13,12 @@ import angle_tools
 import lidar_processing_node
 
 
+def save_callback(_, q: q_solve.Q_solver):
+    q.epsilon *= 1.01
+    rospy.loginfo(f'autosave, epsilon increace to {q.epsilon}')
+    q.save(f'last_save.pkl')
+
+
 def main():
     cmd_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
     actions = {
@@ -21,6 +27,7 @@ def main():
     2: controll.backward,
     3: controll.right,
     }
+
 
     q = q_solve.Q_solver(
         alpha=0.4,
@@ -39,6 +46,8 @@ def main():
     rate = rospy.Rate(1)
     distance_to_puspose = 1.2
     epoch = 0
+
+    timer = rospy.Timer(rospy.Duration(secs=60), lambda i:save_callback(i, q))
 
     while not rospy.is_shutdown() and epoch < 100:
         controll.stop(cmd_publisher)
@@ -60,12 +69,13 @@ def main():
         q.set_new_data(lidar_data=lidar_data, angle_to_purp=purpose_angle, new_pos=pos)
 
         rospy.loginfo(f'''
-                      epoch {epoch} started
-                      purpose: {purpose_pos}''')
+epoch {epoch} started
+purpose: {purpose_pos}''')
 
         start = time.now()
 
         while not done and not rospy.is_shutdown():
+
             msg_lidar = rospy.wait_for_message('/prepared_lidar', String)
             msg_odom = rospy.wait_for_message('/odom', Odometry)
 
@@ -89,6 +99,7 @@ def main():
             
         q.save(f'q_table{epoch}.pkl')
         rospy.loginfo(f'epoch ended with reward {total_reward}')
+        
         
     
 if __name__ == '__main__':

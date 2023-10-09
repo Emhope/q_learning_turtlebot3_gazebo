@@ -123,6 +123,9 @@ class Q_solver:
     def choose_action(self):
         # epsilon greedy policy is here
 
+        sorted_actions = [(a, self.q[self.current_state][a]) for a in self.q[self.current_state]]
+        
+
         action = None
         best_action = max(self.q[self.current_state], key=lambda a: self.q[self.current_state][a])
 
