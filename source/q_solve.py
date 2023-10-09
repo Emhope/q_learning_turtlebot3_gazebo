@@ -123,16 +123,13 @@ class Q_solver:
     def choose_action(self):
         # epsilon greedy policy is here
 
-        sorted_actions = [(a, self.q[self.current_state][a]) for a in self.q[self.current_state]]
-        
+        sorted_actions = sorted(list(self.q[self.current_state].items()), key=lambda i: i[1]) # sort actions in state by reward
 
-        action = None
-        best_action = max(self.q[self.current_state], key=lambda a: self.q[self.current_state][a])
 
-        if random.random() > self.epsilon or not best_action:
-            action = random.choice(list(self.q[self.current_state].keys()))
+        if random.random() > self.epsilon or sorted_actions[0] == sorted_actions[-1]: # if epsion or unknown state
+            action = random.choice(sorted_actions[:-1])[0]
         else:
-            action = best_action
+            action = sorted_actions[-1][0]
 
         self.previous_action = self.current_action
         self.current_action = action
@@ -156,3 +153,5 @@ class Q_solver:
     def upload(self, filename):
         with open(filename, 'rb') as file:
             self.q = pickle.load(file)
+
+

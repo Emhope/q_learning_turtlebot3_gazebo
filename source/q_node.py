@@ -32,12 +32,13 @@ def main():
     q = q_solve.Q_solver(
         alpha=0.4,
         gamma=0.9,
-        epsilon=0.02,
+        epsilon=0.021657134112561604,
         sectors=3,
         danger_classes=lidar_processing_node.DANGER_CLASSES_LIDAR,
         angles_to_purpose=(-15, 15),
         actions=actions
     )
+    q.upload('last_save.pkl')
 
     rospy.init_node('q_node')
     rospy.loginfo('q started')
@@ -47,9 +48,9 @@ def main():
     distance_to_puspose = 1.2
     epoch = 0
 
-    timer = rospy.Timer(rospy.Duration(secs=60), lambda i:save_callback(i, q))
+    timer = rospy.Timer(rospy.Duration(secs=180), lambda i:save_callback(i, q))
 
-    while not rospy.is_shutdown() and epoch < 100:
+    while not rospy.is_shutdown() and epoch < 20:
         controll.stop(cmd_publisher)
         epoch += 1
         
