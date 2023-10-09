@@ -23,7 +23,7 @@ def callback(msg: LaserScan):
 
 
 if __name__ == '__main__':
-    rospy.init_node('test_sub_node')
+    rospy.init_node('lidar_processing_node')
     rospy.loginfo('im started')
 
     rospy.Subscriber('/scan', LaserScan, callback=callback)
