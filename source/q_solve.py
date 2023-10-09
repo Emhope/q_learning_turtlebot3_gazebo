@@ -156,5 +156,3 @@ class Q_solver:
     def upload(self, filename):
         with open(filename, 'rb') as file:
             self.q = pickle.load(file)
-
-
