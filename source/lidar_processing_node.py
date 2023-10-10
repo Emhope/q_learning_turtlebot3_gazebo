@@ -14,8 +14,8 @@ from sensor_msgs.msg import LaserScan
 DANGER_CLASSES_LIDAR = (0.15, 0.4, 0.8)
 
 def callback(msg: LaserScan):
-    lidar_array = lidar.get_lidar_array(msg)
-    simply_lidar = lidar.simplify_lidar(lidar_array, DANGER_CLASSES_LIDAR, 3)
+    lidar_array, min_value = lidar.get_lidar_array(msg)
+    simply_lidar = lidar.simplify_lidar(lidar_array, min_value, DANGER_CLASSES_LIDAR, 3)
     
     msg = String()
     msg.data = ' '.join(map(str, simply_lidar))

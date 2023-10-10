@@ -94,7 +94,7 @@ class Q_solver:
         self.previous_pos = self.current_pos
         self.current_pos = new_pos
 
-    def get_reward(self, speed: float, timestamp: rospy.Duration):
+    def get_reward(self, speed: float, timestamp: rospy.Duration, collision: bool):
 
         if self.previous_pos is None:
             return 0, False
@@ -102,22 +102,25 @@ class Q_solver:
         done = False
         r = 0
 
+        if collision:
+            r -= 0.05
+        # best_coming = speed * timestamp.to_sec()
+        real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
+        print(f'real_coming: {real_coming}')
+        r += 1.0 * real_coming
         # shortening the distance to purpose - good
-        if speed > 0:
-            best_coming = speed * timestamp.to_sec()
-            real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
-            r += 20 * (real_coming / best_coming)
-        else:
-            r -= 5
+        
+        if speed < 0:
+            r += -0.05
         
         # close to obstacle - bad
         if 0 in self.current_state[0]: # 0 in lidar is very close
-            r -= 50
+            r -= 0.05
         
         if distance(self.current_pos, self.purpose_pos) < 0.25:
             done = True
-            r += 80
-        
+            r += 0.08
+        print(r)
         return r, done
 
     def choose_action(self):

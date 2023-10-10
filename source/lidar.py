@@ -21,12 +21,12 @@ ANGLES = (np.arange(-ANGLE, ANGLE, 1) + 90) * pi / 180
 def get_lidar_array (msg: LaserScan, show=False) -> np.array:
     
     global ANGLE
-
     n = np.array(msg.ranges) # anticlockwise
-    n = np.concatenate((n[-ANGLE:], n[:ANGLE])) # 
+    min_value = min(n)
+    n = np.concatenate((n[-ANGLE:], n[:ANGLE]))
     
     if not show:
-        return n
+        return n, min_value
     
     global ANGLES
     plt.clf()
@@ -37,7 +37,7 @@ def get_lidar_array (msg: LaserScan, show=False) -> np.array:
     plt.show(block=False)
     
 
-def simplify_lidar(raw_data: np.array, distances, sectors) -> tuple:
+def simplify_lidar(raw_data: np.array, min_value, distances, sectors) -> tuple:
     size_of_sector = int(raw_data.shape[0]/sectors)
     
     sectors_mins = []
@@ -51,7 +51,7 @@ def simplify_lidar(raw_data: np.array, distances, sectors) -> tuple:
             sectors_mins.append(min(raw_data[i:]))
             break
     
-    return tuple(danger_class(i, distances) for i in sectors_mins)
+    return tuple(danger_class(i, distances) for i in sectors_mins) + (min_value, )
     
 
 def danger_class(distance: float, classes: list) -> int:

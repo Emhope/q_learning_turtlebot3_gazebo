@@ -14,7 +14,7 @@ import lidar_processing_node
 
 
 def save_callback(_, q: q_solve.Q_solver):
-    q.epsilon *= 1.01
+    #q.epsilon *= 1.01
     rospy.loginfo(f'autosave, epsilon increace to {q.epsilon}')
     q.save(f'last_save.pkl')
 
@@ -32,13 +32,13 @@ def main():
     q = q_solve.Q_solver(
         alpha=0.4,
         gamma=0.9,
-        epsilon=0.022536500602639398,
+        epsilon=0.2,
         sectors=3,
         danger_classes=lidar_processing_node.DANGER_CLASSES_LIDAR,
         angles_to_purpose=(-15, 15),
         actions=actions
     )
-    q.upload('last_save.pkl')
+    q.upload('/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/last_save.pkl')
     
     rospy.init_node('q_node')
     rospy.loginfo('q started')
@@ -62,7 +62,7 @@ def main():
         msg_odom = rospy.wait_for_message('/odom', Odometry)
         
         pos = (msg_odom.pose.pose.position.x, msg_odom.pose.pose.position.y)
-        lidar_data = tuple(int(i) for i in msg_lidar.data.split())
+        lidar_data = tuple(int(i) for i in msg_lidar.data.split()[:-1])
         purpose_pos = q_solve.create_purpose(pos, distance_to_puspose)
         purpose_angle = angle_tools.angle_from_robot_to_purp(msg_odom, purpose_pos)
 
@@ -85,11 +85,12 @@ purpose: {purpose_pos}''')
 
             #rospy.loginfo(f'im choose action {actions[cmd]}, speed = {linear_speed}')
             
-            lidar_data = tuple(int(i) for i in msg_lidar.data.split())
+            collision = float(msg_lidar.data.split()[-1]) < 0.15
+            lidar_data = tuple(int(i) for i in msg_lidar.data.split()[:-1])
             pos = (msg_odom.pose.pose.position.x, msg_odom.pose.pose.position.y)
             purpose_angle = angle_tools.angle_from_robot_to_purp(msg_odom, purpose_pos)
 
-            r, done = q.get_reward(linear_speed, time.now() - start)
+            r, done = q.get_reward(linear_speed, time.now() - start, collision)
             total_reward += r
             start = time.now()
     
