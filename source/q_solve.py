@@ -106,7 +106,7 @@ class Q_solver:
             r -= 0.05
         # best_coming = speed * timestamp.to_sec()
         real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
-        print(f'real_coming: {real_coming}')
+        # print(f'real_coming: {real_coming}')
         r += 1.0 * real_coming
         # shortening the distance to purpose - good
         
@@ -120,7 +120,7 @@ class Q_solver:
         if distance(self.current_pos, self.purpose_pos) < 0.25:
             done = True
             r += 0.08
-        print(r)
+        
         return r, done
 
     def choose_action(self):

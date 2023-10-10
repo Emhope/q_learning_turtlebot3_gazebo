@@ -32,13 +32,13 @@ def main():
     q = q_solve.Q_solver(
         alpha=0.4,
         gamma=0.9,
-        epsilon=0.2,
+        epsilon=0.5,
         sectors=3,
         danger_classes=lidar_processing_node.DANGER_CLASSES_LIDAR,
         angles_to_purpose=(-15, 15),
         actions=actions
     )
-    q.upload('/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/last_save.pkl')
+    q.upload('/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table8.pkl')
     
     rospy.init_node('q_node')
     rospy.loginfo('q started')
@@ -92,6 +92,7 @@ purpose: {purpose_pos}''')
 
             r, done = q.get_reward(linear_speed, time.now() - start, collision)
             total_reward += r
+            print(total_reward, ' ' * 10, end='/r')
             start = time.now()
     
             q.set_new_data(lidar_data=lidar_data, angle_to_purp=purpose_angle, new_pos=pos)
@@ -100,6 +101,7 @@ purpose: {purpose_pos}''')
             rate.sleep()
             
         q.save(f'q_table{epoch}.pkl')
+        q.epsilon += 0.05 
         rospy.loginfo(f'epoch ended with reward {total_reward}')
         
         
