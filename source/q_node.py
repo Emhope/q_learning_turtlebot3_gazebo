@@ -2,10 +2,12 @@
 
 import rospy
 import json
+from math import (atan2, pi)
+
 from geometry_msgs.msg import Twist
 from  nav_msgs.msg import Odometry
 from std_msgs.msg import String
-from math import (atan2, pi)
+from std_srvs.srv import Empty
 
 import q_solve
 import controll
@@ -14,12 +16,13 @@ import lidar_processing_node
 
 
 def save_callback(_, q: q_solve.Q_solver):
-    #q.epsilon *= 1.01
-    rospy.loginfo(f'autosave, epsilon increace to {q.epsilon}')
+    # q.epsilon *= 1.01
+    # rospy.loginfo(f'autosave, epsilon increace to {q.epsilon}')
     q.save(f'last_save.pkl')
 
 
 def main():
+    reset = rospy.ServiceProxy('/gazebo/reset_world', Empty)
     cmd_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
     actions = {
     0: controll.left,
@@ -32,13 +35,13 @@ def main():
     q = q_solve.Q_solver(
         alpha=0.4,
         gamma=0.9,
-        epsilon=0.5,
+        epsilon=0.0,
         sectors=3,
         danger_classes=lidar_processing_node.DANGER_CLASSES_LIDAR,
         angles_to_purpose=(-15, 15),
         actions=actions
     )
-    q.upload('/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table8.pkl')
+    # q.upload('/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table15.pkl')
     
     rospy.init_node('q_node')
     rospy.loginfo('q started')
@@ -47,6 +50,7 @@ def main():
     rate = rospy.Rate(1)
     distance_to_puspose = 1.2
     epoch = 0
+    min_reward = -200
 
     timer = rospy.Timer(rospy.Duration(secs=180), lambda i:save_callback(i, q))
 
@@ -76,6 +80,15 @@ purpose: {purpose_pos}''')
         start = time.now()
 
         while not done and not rospy.is_shutdown():
+            if total_reward < min_reward + 10 * (epoch - 1):
+                reset()
+                epoch -= 1
+                rospy.loginfo('bad try')
+                if epoch - 1 == 0:
+                    q.reset_table()
+                else:
+                    q.upload(f'/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table{epoch-1}.pkl')
+                break
 
             msg_lidar = rospy.wait_for_message('/prepared_lidar', String)
             msg_odom = rospy.wait_for_message('/odom', Odometry)
@@ -99,10 +112,11 @@ purpose: {purpose_pos}''')
             q.update(r)
 
             rate.sleep()
-            
-        q.save(f'q_table{epoch}.pkl')
-        q.epsilon += 0.05 
-        rospy.loginfo(f'epoch ended with reward {total_reward}')
+        
+        else:
+            q.save(f'q_table{epoch}.pkl')
+            q.epsilon += 0.02
+            rospy.loginfo(f'epoch ended with reward {total_reward}')
         
         
     

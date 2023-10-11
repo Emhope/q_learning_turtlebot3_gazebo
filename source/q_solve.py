@@ -72,6 +72,16 @@ class Q_solver:
         self.previous_pos = None
         self.purpose_pos = None
 
+    def reset_table(self):
+        self.q = dict()
+        
+        for lidar_state in itertools.product(range(len(self.danger_classes)+1), repeat=self.sectors):
+            for purp_angle in range(len(self.angles_to_purpose)+1):
+                s = (lidar_state, purp_angle)
+                self.q[s] = dict()
+                for action in self.actions:
+                    self.q[s][action] = 0
+
     def set_new_purpose(self, purpose_pos):
         self.purpose_pos = purpose_pos
 
@@ -111,8 +121,11 @@ class Q_solver:
         # shortening the distance to purpose - good
         
         if speed < 0:
-            r += -0.05
+            r -= 0.05
         
+        if self.current_state[0][1] == 0 and speed > 0:
+            r -= 1
+
         # close to obstacle - bad
         if 0 in self.current_state[0]: # 0 in lidar is very close
             r -= 0.05
