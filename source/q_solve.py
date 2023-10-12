@@ -18,7 +18,7 @@ import pickle
 State = namedtuple('state', ['lidar', 'angle_to_purpose'])
 
 
-def create_purpose(pos, distance):
+def create_purpose(pos, distance, env='stage4'):
     angles = np.arange(0, 360, 1)
     radians = np.radians(angles)
     x = pos[0] + distance * np.cos(radians)
@@ -27,10 +27,18 @@ def create_purpose(pos, distance):
     # array of pairs like (x, y) for each point
     points = np.column_stack((x, y))
 
-    mask = np.abs(points[:, 0]) < 2.2
-    mask &= np.abs(points[:, 0]) > -2.2
-    mask &= np.abs(points[:, 1]) < 2.2
-    mask &= np.abs(points[:, 1]) > -2.2
+    if env == 'stage4':    
+        mask = np.abs(points[:, 0]) < 2.2
+        mask &= np.abs(points[:, 0]) > -2.2
+        mask &= np.abs(points[:, 1]) < 2.2
+        mask &= np.abs(points[:, 1]) > -2.2
+
+    elif env == 'tworld':
+        mask = np.abs(points[:, 0]) < 1.5
+        mask &= np.abs(points[:, 0]) > -1.5
+        mask &= np.abs(points[:, 1]) < 1.5
+        mask &= np.abs(points[:, 1]) > -1.5
+
 
     return random.choice(points[mask])
 
@@ -68,7 +76,10 @@ class Q_solver:
         self.current_action = None
         self.previous_action = None
 
-        self.pos = None
+        self.current_angle = None
+        self.previous_angle = None
+
+        self.current_pos = None
         self.previous_pos = None
         self.purpose_pos = None
 
@@ -91,6 +102,9 @@ class Q_solver:
         self.current_action = None
         self.previous_action = None
 
+        self.current_angle = None
+        self.previous_angle = None
+
         self.current_pos = None
         self.previous_pos = None
 
@@ -101,36 +115,37 @@ class Q_solver:
 
         self.previous_state = self.current_state
         self.current_state = new_state
+        self.previous_angle = self.current_angle
+        self.current_angle = angle_to_purp
         self.previous_pos = self.current_pos
         self.current_pos = new_pos
 
     def get_reward(self, speed: float, timestamp: rospy.Duration, collision: bool):
 
-        if self.previous_pos is None:
-            return 0, False
-
         done = False
         r = 0
 
+        if abs(self.current_angle) < abs(self.previous_angle):
+            r += 0.04
+
+        if self.previous_pos is None:
+            return r, done
+
         if collision:
             r -= 0.05
+
         # best_coming = speed * timestamp.to_sec()
         real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
-        # print(f'real_coming: {real_coming}')
-        r += 1.0 * real_coming
+        r += 2.0 * real_coming
         # shortening the distance to purpose - good
         
         if speed < 0:
             r -= 0.05
         
-        if self.current_state[0][1] == 0 and speed > 0:
-            r -= 1
-
-        # close to obstacle - bad
-        if 0 in self.current_state[0]: # 0 in lidar is very close
-            r -= 0.05
+        if 0 in self.current_state[0] and speed >= 0:
+            r -= 5
         
-        if distance(self.current_pos, self.purpose_pos) < 0.25:
+        if distance(self.current_pos, self.purpose_pos) < 0.20:
             done = True
             r += 0.08
         
