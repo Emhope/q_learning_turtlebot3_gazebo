@@ -35,26 +35,25 @@ def main():
     q = q_solve.Q_solver(
         alpha=0.4,
         gamma=0.9,
-        epsilon=0.0,
+        epsilon=0.01,
         sectors=3,
         danger_classes=lidar_processing_node.DANGER_CLASSES_LIDAR,
         angles_to_purpose=(-15, 15),
         actions=actions
     )
-    # q.upload('/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table15.pkl')
+    # q.upload('/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table200.pkl')
     
-    rospy.init_node('q_node')
+    rospy.init_node('q_learn_node')
     rospy.loginfo('q started')
 
     time = rospy.Time()
     rate = rospy.Rate(1)
     distance_to_puspose = 1.2
     epoch = 0
-    min_reward = -200
+    min_reward = -600
 
-    timer = rospy.Timer(rospy.Duration(secs=180), lambda i:save_callback(i, q))
-
-    while not rospy.is_shutdown() and epoch < 20:
+    reset()
+    while not rospy.is_shutdown() and epoch < 500:
         controll.stop(cmd_publisher)
         epoch += 1
         
@@ -67,7 +66,7 @@ def main():
         
         pos = (msg_odom.pose.pose.position.x, msg_odom.pose.pose.position.y)
         lidar_data = tuple(int(i) for i in msg_lidar.data.split()[:-1])
-        purpose_pos = q_solve.create_purpose(pos, distance_to_puspose)
+        purpose_pos = q_solve.create_purpose(pos, distance_to_puspose, env='stage4')
         purpose_angle = angle_tools.angle_from_robot_to_purp(msg_odom, purpose_pos)
 
         q.set_new_purpose(purpose_pos)
@@ -75,51 +74,50 @@ def main():
 
         rospy.loginfo(f'''
 epoch {epoch} started
+epsilon: {q.epsilon}
 purpose: {purpose_pos}''')
 
         start = time.now()
 
         while not done and not rospy.is_shutdown():
-            if total_reward < min_reward + 10 * (epoch - 1):
-                reset()
+            if total_reward < min_reward:
+                # reset()
                 epoch -= 1
                 rospy.loginfo('bad try')
-                if epoch - 1 == 0:
+                if epoch == 0:
                     q.reset_table()
                 else:
-                    q.upload(f'/home/misha/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table{epoch-1}.pkl')
+                    q.upload(f'/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table{epoch}.pkl')
                 break
 
             msg_lidar = rospy.wait_for_message('/prepared_lidar', String)
             msg_odom = rospy.wait_for_message('/odom', Odometry)
-
-            cmd = q.choose_action()
-            linear_speed = actions[cmd](cmd_publisher, linear_speed)
-
-            #rospy.loginfo(f'im choose action {actions[cmd]}, speed = {linear_speed}')
             
             collision = float(msg_lidar.data.split()[-1]) < 0.15
             lidar_data = tuple(int(i) for i in msg_lidar.data.split()[:-1])
             pos = (msg_odom.pose.pose.position.x, msg_odom.pose.pose.position.y)
             purpose_angle = angle_tools.angle_from_robot_to_purp(msg_odom, purpose_pos)
 
+            q.set_new_data(lidar_data=lidar_data, angle_to_purp=purpose_angle, new_pos=pos)
             r, done = q.get_reward(linear_speed, time.now() - start, collision)
+            q.update(r)
+
+            cmd = q.choose_action()
+            linear_speed = actions[cmd](cmd_publisher, linear_speed)
+
             total_reward += r
             print(total_reward, ' ' * 10, end='\r')
             start = time.now()
-    
-            q.set_new_data(lidar_data=lidar_data, angle_to_purp=purpose_angle, new_pos=pos)
-            q.update(r)
 
             rate.sleep()
         
         else:
             q.save(f'q_table{epoch}.pkl')
-            q.epsilon += 0.02
+            q.epsilon += 0.0015
+            min_reward += 1.2
             rospy.loginfo(f'epoch ended with reward {total_reward}')
         
-        
-    
+
 if __name__ == '__main__':
     main()
     

@@ -20,7 +20,7 @@ def stop(pub: rospy.Publisher):
 
 def forward(pub: rospy.Publisher, speed):
     
-    current_speed = min(FORWARD_SPEED, max(speed + 0.02, 0))
+    current_speed = min(FORWARD_SPEED, max(speed + 0.02, 0.02))
     make_cmd(pub, current_speed, 0.0)
     return current_speed
 
@@ -33,12 +33,12 @@ def backward(pub: rospy.Publisher, speed):
 
 def left(pub: rospy.Publisher, speed):
     
-    current_speed = max(min(FORWARD_SPEED, speed + 0.01), 0.01)
-    make_cmd(pub, current_speed * 0.5, ROT_SPEED)
+    current_speed = max(min(FORWARD_SPEED, speed + 0.01), 0.02) * 0.5
+    make_cmd(pub, current_speed, ROT_SPEED)
     return current_speed
 
 def right(pub: rospy.Publisher, speed):
     
-    current_speed = max(min(FORWARD_SPEED, speed + 0.01), 0.01)
-    make_cmd(pub, current_speed * 0.5, -ROT_SPEED)
+    current_speed = max(min(FORWARD_SPEED, speed + 0.01), 0.02) * 0.5
+    make_cmd(pub, current_speed, -ROT_SPEED)
     return current_speed
