@@ -3,6 +3,8 @@
 import rospy
 import json
 from math import (atan2, pi)
+import pickle
+from time import perf_counter
 
 from geometry_msgs.msg import Twist
 from  nav_msgs.msg import Odometry
@@ -41,7 +43,7 @@ def main():
         angles_to_purpose=(-15, 15),
         actions=actions
     )
-    # q.upload('/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table200.pkl')
+    q.upload('/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table49.pkl')
     
     rospy.init_node('q_learn_node')
     rospy.loginfo('q started')
@@ -50,13 +52,15 @@ def main():
     rate = rospy.Rate(1)
     distance_to_puspose = 1.2
     epoch = 0
-    min_reward = -600
+    min_reward = -370 + epoch
+    rewards = []
+    bad_try = False
 
     reset()
-    while not rospy.is_shutdown() and epoch < 500:
+    while not rospy.is_shutdown() and epoch < 300:
         controll.stop(cmd_publisher)
         epoch += 1
-        
+
         linear_speed = 0
         total_reward = 0
         done = False
@@ -77,17 +81,18 @@ epoch {epoch} started
 epsilon: {q.epsilon}
 purpose: {purpose_pos}''')
 
+
+
+        if not bad_try:
+            epoch_start = perf_counter()
         start = time.now()
 
         while not done and not rospy.is_shutdown():
             if total_reward < min_reward:
-                # reset()
+                bad_try = True
                 epoch -= 1
                 rospy.loginfo('bad try')
-                if epoch == 0:
-                    q.reset_table()
-                else:
-                    q.upload(f'/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table{epoch}.pkl')
+                rewards.append(total_reward)
                 break
 
             msg_lidar = rospy.wait_for_message('/prepared_lidar', String)
@@ -106,17 +111,23 @@ purpose: {purpose_pos}''')
             linear_speed = actions[cmd](cmd_publisher, linear_speed)
 
             total_reward += r
-            print(total_reward, ' ' * 10, end='\r')
+            print(total_reward, ' ' * 25, end='\r')
+            
             start = time.now()
 
             rate.sleep()
         
         else:
+            bad_try = False
             q.save(f'q_table{epoch}.pkl')
-            q.epsilon += 0.0015
+            q.epsilon += 0.003
             min_reward += 1.2
-            rospy.loginfo(f'epoch ended with reward {total_reward}')
-        
+            rospy.loginfo(f'epoch ended with reward {total_reward}, for {perf_counter() - epoch_start} seconds')
+            rewards.append([total_reward, perf_counter() - epoch_start])
+            rewards.append('epoch')
+
+    with open('rewards.pkl', 'wb') as file:
+        pickle.dump(rewards, file)
 
 if __name__ == '__main__':
     main()

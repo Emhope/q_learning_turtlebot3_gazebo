@@ -41,7 +41,7 @@ def main():
         angles_to_purpose=(-15, 15),
         actions=actions
     )
-    q.upload('/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table200.pkl')
+    q.upload('/home/mishapc/practice_ws/src/q_learning/q_learning_turtlebot3_gazebo/q_table100.pkl')
     
     rospy.init_node('q_use_node')
     rospy.loginfo('q started')

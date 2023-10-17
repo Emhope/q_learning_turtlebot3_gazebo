@@ -125,29 +125,30 @@ class Q_solver:
         done = False
         r = 0
 
-        if abs(self.current_angle) < abs(self.previous_angle):
-            r += 0.04
-
         if self.previous_pos is None:
             return r, done
 
-        if collision:
-            r -= 0.05
+        # if abs(self.current_angle) < abs(self.previous_angle):
+        #     r += 0.04
+
+        # if collision:
+        #     r -= 0.05
 
         # best_coming = speed * timestamp.to_sec()
         real_coming = distance(self.previous_pos, self.purpose_pos) - distance(self.current_pos, self.purpose_pos)
-        r += 2.0 * real_coming
+        r += 5.0 * real_coming
         # shortening the distance to purpose - good
         
-        if speed < 0:
-            r -= 0.05
+        # if speed < 0:
+        #     r -= 0.05
         
-        if 0 in self.current_state[0] and speed >= 0:
-            r -= 5
+        # if 0 in self.current_state[0] and speed >= 0:
+        #     r -= 5
         
         if distance(self.current_pos, self.purpose_pos) < 0.20:
             done = True
-            r += 0.08
+        else:
+            r -= 1
         
         return r, done
 
@@ -158,7 +159,8 @@ class Q_solver:
 
 
         if random.random() > self.epsilon or sorted_actions[0] == sorted_actions[-1]: # if epsion or unknown state
-            action = random.choice(sorted_actions[:-1])[0]
+            # action = random.choice(sorted_actions[:-1])[0]
+            action = random.choice(sorted_actions)[0]
         else:
             action = sorted_actions[-1][0]
 
